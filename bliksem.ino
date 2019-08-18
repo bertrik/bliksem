@@ -32,12 +32,12 @@ void setup(void)
     ArduinoOTA.setHostname("esp-bliksem");
     ArduinoOTA.setPassword("bliksem");
     ArduinoOTA.begin();
-    
+
     // connect to wifi
     Serial.println("Starting WIFI manager ...");
     wifiManager.setConfigPortalTimeout(120);
     wifiManager.autoConnect("ESP-BLIKSEM");
-    
+
     // MQTT setup
     mqttClient.setServer(MQTT_HOST, MQTT_PORT);
 }
@@ -49,5 +49,3 @@ void loop(void)
 
     ArduinoOTA.handle();
 }
-
-
