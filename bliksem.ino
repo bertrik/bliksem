@@ -7,10 +7,13 @@
 #include <SparkFun_AS3935.h>
 
 #define PIN_SI  D1
+#define PIN_IRQ D2
 #define PIN_CS  D8
 
-#define MQTT_HOST   "mosquitto.space.revspace.nl"
+//#define MQTT_HOST   "mosquitto.space.revspace.nl"
+#define MQTT_HOST   "stofradar.nl"
 #define MQTT_PORT   1883
+#define MQTT_TOPIC  "revspace/bliksem/%s/%s"
 
 static char esp_id[16];
 
@@ -19,8 +22,28 @@ static WiFiClient wifiClient;
 static PubSubClient mqttClient(wifiClient);
 static SparkFun_AS3935 lightning;
 
+static char statustopic[128];
+
+static boolean mqtt_alive(void)
+{
+    mqttClient.loop();
+
+    // stay connected
+    bool result = mqttClient.connected();
+    if (result) {
+        result = mqttClient.connect(esp_id, statustopic, 0, true, "offline");
+        if (result) {
+            result = mqttClient.publish(statustopic, "online", true);
+        }
+    }
+
+    return result;
+}
+
+
 void setup(void)
 {
+    pinMode(PIN_IRQ, INPUT);
     pinMode(PIN_SI, OUTPUT);
     digitalWrite(PIN_SI, 0);    // 0 = SPI, 1 = I2C
 
@@ -62,13 +85,38 @@ void setup(void)
     wifiManager.autoConnect("ESP-BLIKSEM");
 
     // MQTT setup
+    snprintf(statustopic, sizeof(statustopic), MQTT_TOPIC, esp_id, "status");
     mqttClient.setServer(MQTT_HOST, MQTT_PORT);
 }
 
 void loop(void)
 {
+    if (digitalRead(PIN_IRQ) != 0) {
+        // read 2 ms and read interrupt cause
+        delay(2);
+        int intReg = lightning.readInterruptReg();
+        int distance;
+        switch (intReg) {
+        case NOISE_TO_HIGH:
+            Serial.printf("Noise!\n");
+            break;
+        case DISTURBER_DETECT:
+            break;
+        case LIGHTNING:
+            distance = lightning.distanceToStorm();
+            Serial.printf("Lightning at %d km!\n", distance);
+            break;
+        default:
+            // unhandled
+            Serial.printf("Unhandled interrupt!\n");
+            break;
+        }
+    }
+
     // keep MQTT alive
-    mqttClient.loop();
+    mqtt_alive();
 
     ArduinoOTA.handle();
 }
+
+
