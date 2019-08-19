@@ -6,7 +6,7 @@
 #include <PubSubClient.h>
 #include <SparkFun_AS3935.h>
 
-#define PIN_SI  D3
+#define PIN_SI  D1
 #define PIN_CS  D8
 
 #define MQTT_HOST   "mosquitto.space.revspace.nl"
