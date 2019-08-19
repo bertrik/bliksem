@@ -13,7 +13,7 @@
 //#define MQTT_HOST   "mosquitto.space.revspace.nl"
 #define MQTT_HOST   "stofradar.nl"
 #define MQTT_PORT   1883
-#define MQTT_TOPIC  "revspace/bliksem/%s/%s"
+#define MQTT_TOPIC  "revspace/sensors/bliksem/%s/%s"
 
 static char esp_id[16];
 
