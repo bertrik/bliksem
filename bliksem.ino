@@ -24,17 +24,19 @@ static SparkFun_AS3935 lightning;
 
 static char statustopic[128];
 
-static boolean mqtt_alive(void)
+static bool mqtt_alive(void)
 {
     mqttClient.loop();
 
     // stay connected
     bool result = mqttClient.connected();
-    if (result) {
+    if (!result) {
+        Serial.printf("Connecting with status topic %s...", statustopic);
         result = mqttClient.connect(esp_id, statustopic, 0, true, "offline");
         if (result) {
             result = mqttClient.publish(statustopic, "online", true);
         }
+        Serial.printf(result ? "OK\n" : "FAILED\n");
     }
 
     return result;
@@ -74,7 +76,7 @@ void setup(void)
     Serial.printf("* lightning energy:    %d\n", lightning.lightningEnergy());
 
     // get ESP id
-    sprintf(esp_id, "%06X", ESP.getChipId());
+    sprintf(esp_id, "%06x", ESP.getChipId());
     Serial.printf("ESP ID: %s\n", esp_id);
 
     // setup OTA
