@@ -59,6 +59,9 @@ void setup(void)
         Serial.println("Bliksem init FAIL!");
         while(1);
     }
+    // ignore disturbances
+    lightning.maskDisturber(true);
+    // print summary of settings
     Serial.printf("* indoor/outdoor:      0x%X\n", lightning.readIndoorOutdoor());
     Serial.printf("* watchdog threshold:  %d\n", lightning.readWatchdogThreshold());
     Serial.printf("* noise level:         %d\n", lightning.readNoiseLevel());
@@ -96,6 +99,7 @@ void loop(void)
         delay(2);
         int intReg = lightning.readInterruptReg();
         int distance;
+        int energy;
         switch (intReg) {
         case NOISE_TO_HIGH:
             Serial.printf("Noise!\n");
@@ -104,7 +108,8 @@ void loop(void)
             break;
         case LIGHTNING:
             distance = lightning.distanceToStorm();
-            Serial.printf("Lightning at %d km!\n", distance);
+            energy = lightning.lightningEnergy();
+            Serial.printf("Lightning at %2d km (energy %d)!\n", distance, energy);
             break;
         default:
             // unhandled
