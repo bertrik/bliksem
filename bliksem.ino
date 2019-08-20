@@ -115,7 +115,7 @@ void loop(void)
             break;
         default:
             // unhandled
-            Serial.printf("Unhandled interrupt!\n");
+            Serial.printf("Unhandled interrupt 0x%02X!\n", intReg);
             break;
         }
     }
