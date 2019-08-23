@@ -5,6 +5,7 @@
 #include <WiFiManager.h>
 #include <PubSubClient.h>
 #include <SparkFun_AS3935.h>
+#include <NTPClient.h>
 
 #define PIN_SI  D1
 #define PIN_IRQ D2
@@ -21,6 +22,8 @@ static WiFiManager wifiManager;
 static WiFiClient wifiClient;
 static PubSubClient mqttClient(wifiClient);
 static SparkFun_AS3935 lightning;
+static WiFiUDP ntpUDP;
+static NTPClient ntp(ntpUDP);
 
 static char statustopic[128];
 
@@ -59,7 +62,7 @@ void setup(void)
         Serial.println("Bliksem init OK!");
     } else {
         Serial.println("Bliksem init FAIL!");
-        while(1);
+        while (1);
     }
     // ignore disturbances
     lightning.maskDisturber(true);
@@ -92,12 +95,15 @@ void setup(void)
     // MQTT setup
     snprintf(statustopic, sizeof(statustopic), MQTT_TOPIC, esp_id, "status");
     mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+
+    // NTP
+    ntp.begin();
 }
 
 void loop(void)
 {
     if (digitalRead(PIN_IRQ) != 0) {
-        // read 2 ms and read interrupt cause
+        // wait 2 ms and read interrupt cause
         delay(2);
         int intReg = lightning.readInterruptReg();
         int distance;
@@ -111,7 +117,8 @@ void loop(void)
         case LIGHTNING:
             distance = lightning.distanceToStorm();
             energy = lightning.lightningEnergy();
-            Serial.printf("Lightning at %2d km (energy %d)!\n", distance, energy);
+            Serial.printf("%lu: Lightning at %2d km (energy %d)!\n", ntp.getEpochTime(), distance,
+                          energy);
             break;
         default:
             // unhandled
@@ -119,11 +126,10 @@ void loop(void)
             break;
         }
     }
-
     // keep MQTT alive
     mqtt_alive();
 
     ArduinoOTA.handle();
+
+    ntp.update();
 }
-
-
