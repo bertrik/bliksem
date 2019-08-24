@@ -28,10 +28,8 @@ static NTPClient ntp(ntpUDP);
 static char statustopic[128];
 static char valuetopic[128];
 
-static bool mqtt_alive(void)
+static bool mqtt_keep_connected(void)
 {
-    mqttClient.loop();
-
     // stay connected
     bool result = mqttClient.connected();
     if (!result) {
@@ -114,6 +112,9 @@ void setup(void)
 
 void loop(void)
 {
+    static int error_count = 0;
+    static unsigned long second_prev = 0;
+
     if (digitalRead(PIN_IRQ) != 0) {
         // wait 2 ms and read interrupt cause
         delay(2);
@@ -142,10 +143,25 @@ void loop(void)
             break;
         }
     }
-    // keep MQTT alive
-    mqtt_alive();
+
+    // keep MQTT connected
+    unsigned long second = millis() / 1000;
+    if (second != second_prev) {
+        second_prev = second;
+        if (!mqtt_keep_connected()) {
+            error_count++;
+        } else {
+            error_count = 0;
+        }
+        if (error_count > 60) {
+            Serial.printf("Too many connect errors, rebooting ...\n");
+            ESP.restart();
+        }
+    }
 
     ArduinoOTA.handle();
-
     ntp.update();
+    mqttClient.loop();
 }
+
+
