@@ -11,8 +11,8 @@
 #define PIN_IRQ D2
 #define PIN_CS  D8
 
-//#define MQTT_HOST   "mosquitto.space.revspace.nl"
-#define MQTT_HOST   "stofradar.nl"
+#define MQTT_HOST   "mosquitto.space.revspace.nl"
+//#define MQTT_HOST   "stofradar.nl"
 #define MQTT_PORT   1883
 #define MQTT_TOPIC  "revspace/sensors/bliksem/%s/%s"
 
@@ -26,6 +26,7 @@ static WiFiUDP ntpUDP;
 static NTPClient ntp(ntpUDP);
 
 static char statustopic[128];
+static char valuetopic[128];
 
 static bool mqtt_alive(void)
 {
@@ -45,6 +46,16 @@ static bool mqtt_alive(void)
     return result;
 }
 
+static bool mqtt_send(const char *topic, const char *value, bool retained)
+{
+    bool result = mqttClient.connected();
+    if (result) {
+        Serial.printf("Publishing %s to %s ...", value, topic);
+        result = mqttClient.publish(topic, value, retained);
+        Serial.println(result ? "OK" : "FAIL");
+    }
+    return result;
+}
 
 void setup(void)
 {
@@ -94,6 +105,7 @@ void setup(void)
 
     // MQTT setup
     snprintf(statustopic, sizeof(statustopic), MQTT_TOPIC, esp_id, "status");
+    snprintf(valuetopic, sizeof(valuetopic), MQTT_TOPIC, esp_id, "bliksem");
     mqttClient.setServer(MQTT_HOST, MQTT_PORT);
 
     // NTP
@@ -105,24 +117,28 @@ void loop(void)
     if (digitalRead(PIN_IRQ) != 0) {
         // wait 2 ms and read interrupt cause
         delay(2);
+
+        char value[256];
         int intReg = lightning.readInterruptReg();
+        unsigned long int time = ntp.getEpochTime();
         int distance;
         int energy;
         switch (intReg) {
         case NOISE_TO_HIGH:
-            Serial.printf("Noise!\n");
-            break;
         case DISTURBER_DETECT:
+            // ignore
             break;
         case LIGHTNING:
             distance = lightning.distanceToStorm();
             energy = lightning.lightningEnergy();
-            Serial.printf("%lu: Lightning at %2d km (energy %d)!\n", ntp.getEpochTime(), distance,
-                          energy);
+            if (distance > 1) {
+                snprintf(value, sizeof(value), "{\"time\":%lu,\"distance\":%d,\"energy\":%d}", time,
+                         distance, energy);
+                mqtt_send(valuetopic, value, true);
+            }
             break;
         default:
-            // unhandled
-            Serial.printf("Unhandled interrupt 0x%02X!\n", intReg);
+            // spurious, ignore
             break;
         }
     }
