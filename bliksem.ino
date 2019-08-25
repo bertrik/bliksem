@@ -120,19 +120,17 @@ void loop(void)
         delay(2);
 
         char value[256];
-        int intReg = lightning.readInterruptReg();
         unsigned long int time = ntp.getEpochTime();
-        int distance;
-        int energy;
+        int intReg = lightning.readInterruptReg();
+        int distance = lightning.distanceToStorm();
+        int energy = lightning.lightningEnergy();
         switch (intReg) {
         case NOISE_TO_HIGH:
         case DISTURBER_DETECT:
             // ignore
             break;
         case LIGHTNING:
-            distance = lightning.distanceToStorm();
-            energy = lightning.lightningEnergy();
-            if (distance > 1) {
+            if ((distance > 1) && (energy > 0)) {
                 snprintf(value, sizeof(value), "{\"time\":%lu,\"distance\":%d,\"energy\":%d}", time,
                          distance, energy);
                 mqtt_send(valuetopic, value, true);
