@@ -73,6 +73,7 @@ void setup(void)
         Serial.println("Bliksem init FAIL!");
         while (1);
     }
+    lightning.wakeUp();
     // ignore disturbances
     lightning.maskDisturber(true);
     // print summary of settings
