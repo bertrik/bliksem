@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <ArduinoOTA.h>
+#include "OTA_PASSWORD.h"
 
 #include <ESP8266WiFi.h>
 #include <WiFiManager.h>
@@ -94,7 +95,7 @@ void setup(void)
 
     // setup OTA
     ArduinoOTA.setHostname("esp-bliksem");
-    ArduinoOTA.setPassword("bliksem");
+    ArduinoOTA.setPassword(OTA_PASSWORD);
     ArduinoOTA.begin();
 
     // connect to wifi
